@@ -44,7 +44,7 @@ module Cfu (
 
     assign cmd_ready = ~rsp_valid & ~calculating;
 
-    reg [31:0] exp_input;
+    reg [31:0] exp_input, exp_integer_bits;
     reg exp_input_valid;
     wire exp_finish;
     wire [31:0] exp_result;
@@ -53,6 +53,7 @@ module Cfu (
         .clk(clk),
         .rst(reset),
         .x(exp_input),
+        .integer_bits(exp_integer_bits[4:0]),
         .input_valid(exp_input_valid),
         .exp_x(exp_result),
         .output_valid(exp_finish)
@@ -131,6 +132,7 @@ module Cfu (
             end
             else if (cmd_payload_function_id[9:3] == 12) begin
                 exp_input <= cmd_payload_inputs_0;
+                exp_integer_bits <= cmd_payload_inputs_1;
 
                 exp_input_valid <= 1;
                 calculating <= 1;
@@ -169,6 +171,7 @@ module exp(
     input wire clk,
     input wire rst,
     input wire [31:0] x,
+    input wire [4:0] integer_bits,
     input wire input_valid,
     output reg [31:0] exp_x,
     output reg output_valid
@@ -178,21 +181,21 @@ module exp(
     reg [1:0] state = IDLE;
     reg [2:0] i = 0;
 
-    reg [35:0] x_extention;
-    reg [35:0] temp; // result reg
-    reg [71:0] x_power;
-    reg [71:0] term;
+    reg [36:0] x_extention;
+    reg [36:0] temp; // result reg
+    reg [73:0] x_power;
+    reg [73:0] term;
 
     reg [15:0] multiplier [0:5];
 
     always @(posedge clk) begin
         if (rst) begin
             state <= IDLE;
-            temp <= 36'd0;
-            x_power <= 72'd0;
-            term <= 72'd0;
+            temp <= 37'd0;
+            x_power <= 74'd0;
+            term <= 74'd0;
             i <= 0;
-            x_extention <= 36'd0;
+            x_extention <= 37'd0;
             output_valid <= 0;
 
             multiplier[0] <= 16'b1000000000000000;
@@ -207,7 +210,7 @@ module exp(
                 IDLE: begin
                     output_valid <= 0;
                     if (input_valid) begin
-                        x_extention <= {1'b0, x[30:0]} << 4; // q4 -> q0
+                        x_extention <= {6'b0, x[30:0]} << integer_bits; // q4 -> q0
                         temp <= 64'd1 << 31; // initialize temp = 1
                         i <= 1;
                         state <= INIT;

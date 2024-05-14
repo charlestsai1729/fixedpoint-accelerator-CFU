@@ -1,0 +1,6 @@
+*
+!.gitignore
+!fixed_point_accelerator/
+!fixed_point_accelerator/**
+fixed_point_accelerator/build/
+fixed_point_accelerator/build/**
