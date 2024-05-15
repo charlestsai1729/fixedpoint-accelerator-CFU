@@ -53,7 +53,7 @@ module Cfu (
         .clk(clk),
         .rst(reset),
         .x(exp_input),
-        .integer_bits(exp_integer_bits[4:0]),
+        .integer_bits(exp_integer_bits[3:0]),
         .input_valid(exp_input_valid),
         .exp_x(exp_result),
         .output_valid(exp_finish)
@@ -171,7 +171,7 @@ module exp(
     input wire clk,
     input wire rst,
     input wire [31:0] x,
-    input wire [4:0] integer_bits,
+    input wire [3:0] integer_bits,
     input wire input_valid,
     output reg [31:0] exp_x,
     output reg output_valid
@@ -210,7 +210,7 @@ module exp(
                 IDLE: begin
                     output_valid <= 0;
                     if (input_valid) begin
-                        x_extention <= {6'b0, x[30:0]} << integer_bits; // q4 -> q0
+                        x_extention <= {6'b0, x[30:0]} << integer_bits; // q -> q0
                         temp <= 64'd1 << 31; // initialize temp = 1
                         i <= 1;
                         state <= INIT;
@@ -235,7 +235,7 @@ module exp(
                 end
                 DONE: begin
                     state <= IDLE;
-                    exp_x <= temp[31:0];
+                    exp_x <= temp[31] == 1 ? temp[31:0] - 1 : temp[31:0];
                     output_valid <= 1;
                 end
             endcase

@@ -800,6 +800,7 @@ FixedPoint<tRawType, 0> exp_on_negative_values_cfu(
   // typedef FixedPoint<tRawType, tIntegerBits> InputF;
   typedef FixedPoint<tRawType, 0> ResultF;
 
+  // printf("%d\n", tIntegerBits);
   ResultF b = ResultF::FromRaw(cfu_op0(12, a.raw(), tIntegerBits));
   return b;
 }

@@ -25,6 +25,8 @@ limitations under the License.
 #include "tensorflow/lite/kernels/internal/types.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 
+#include "perf.h"
+
 namespace tflite {
 namespace reference_ops {
 
@@ -76,6 +78,7 @@ inline void Softmax(const SoftmaxParams& params,
   // -32 before multiplying by input_beta_multiplier, and therefore as large as
   // -16 afterwards.  Note that exp(-8) is definitely not insignificant to
   // accumulation, but exp(-16) definitely is.
+  perf_enable_counter(2);
   static const int kScaledDiffIntegerBits = 5;
   static const int kAccumulationIntegerBits = 12;
   using FixedPointScaledDiff =
@@ -106,8 +109,12 @@ inline void Softmax(const SoftmaxParams& params,
                 input_diff, input_beta_multiplier, input_beta_left_shift);
         const FixedPointScaledDiff scaled_diff_f8 =
             FixedPointScaledDiff::FromRaw(input_diff_rescaled);
+        // sum_of_exps = sum_of_exps + gemmlowp::Rescale<kAccumulationIntegerBits>(
+        //                                 exp_on_negative_values(scaled_diff_f8));
         sum_of_exps = sum_of_exps + gemmlowp::Rescale<kAccumulationIntegerBits>(
-                                        exp_on_negative_values(scaled_diff_f8));
+                                        exp_on_negative_values_cfu(Neg(scaled_diff_f8)));
+        // printf("input: %ld, negative: %ld\n", scaled_diff_f8.raw(), (Neg(scaled_diff_f8)).raw());
+        // printf("correct: %ld, cfu: %ld\n\n", exp_on_negative_values(scaled_diff_f8).raw(), exp_on_negative_values_cfu(Neg(scaled_diff_f8)).raw());
       }
     }
 
@@ -125,7 +132,8 @@ inline void Softmax(const SoftmaxParams& params,
         const FixedPointScaledDiff scaled_diff_f8 =
             FixedPointScaledDiff::FromRaw(input_diff_rescaled);
 
-        FixedPoint0 exp_in_0 = exp_on_negative_values(scaled_diff_f8);
+        // FixedPoint0 exp_in_0 = exp_on_negative_values(scaled_diff_f8);
+        FixedPoint0 exp_in_0 = exp_on_negative_values_cfu(Neg(scaled_diff_f8));
         int32_t unsat_output = gemmlowp::RoundingDivideByPOT(
             (shifted_scale * exp_in_0).raw(),
             num_bits_over_unit + 31 - (sizeof(OutputT) * 8));
@@ -143,6 +151,7 @@ inline void Softmax(const SoftmaxParams& params,
       }
     }
   }
+  perf_disable_counter(2);
 }
 
 // Computes exp(input - max_input)
